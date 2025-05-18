@@ -1,0 +1,41 @@
+name: Bin release
+on:
+  release:
+    types: [created]
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  releases-matrix:
+    name: Release Go Binary
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, windows, darwin]
+        goarch: [amd64, arm64]
+        exclude:
+          - goarch: arm64
+            goos: windows
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get the tag name
+        id: get_tag_name
+        run: |
+          # Extract tag name and remove "v" if present
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG_NAME#v}"
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo BUILD_TIME=$(date) >> ${GITHUB_ENV}
+      - uses: wangyoucao577/go-release-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          goos: ${{ matrix.goos }}
+          goarch: ${{ matrix.goarch }}
+          goversion: "https://dl.google.com/go/go1.24.3.linux-amd64.tar.gz"
+          project_path: "./"
+          binary_name: "s3safe"
+          build_flags: -v
+          ldflags: -X "github.com/jkaninda/s3safe/utils.Version=${{ env.VERSION }}" -X "github.com/jkaninda/s3safe/utils.BuildTime=${{ env.BUILD_TIME }}"
+          #extra_files: LICENSE README.md

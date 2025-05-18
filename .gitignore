@@ -1,0 +1,11 @@
+/.history
+backup
+data
+.env
+.DS_Store
+/.idea
+bin
+tests
+backups
+s3safe
+NOTES.md
