@@ -29,9 +29,15 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Get the tag name
+      -
+        name: Get the tag name
         id: get_tag_name
-        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+        run: |
+          # Extract tag name and remove "v" if present
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG_NAME#v}"
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo BUILD_TIME=$(date) >> ${GITHUB_ENV}
       - name: Build and push
         uses: docker/build-push-action@v3
         with:
@@ -39,9 +45,9 @@ jobs:
           file: "./Dockerfile"
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           build-args: |
-            appVersion=${{ env.TAG_NAME }}
+            appVersion=${{ env.VERSION }}
           tags: |
-            "${{vars.BUILDKIT_IMAGE}}:${{ env.TAG_NAME }}"
+            "${{vars.BUILDKIT_IMAGE}}:${{ env.VERSION }}"
             "${{vars.BUILDKIT_IMAGE}}:latest"
-            "ghcr.io/${{vars.BUILDKIT_IMAGE}}:${{ env.TAG_NAME }}"
+            "ghcr.io/${{vars.BUILDKIT_IMAGE}}:${{ env.VERSION }}"
             "ghcr.io/${{vars.BUILDKIT_IMAGE}}:latest"
