@@ -14,6 +14,7 @@ help:
 	@echo "  docker-build - Build Docker image"
 	@echo "  docker-backup - Backup files to S3 using Docker"
 	@echo "  docker-restore - Restore files from S3 using Docker"
+	@echo "  validate  - Validate the application"
 	@echo "  help      - Show this help message"
 
 .PHONY: help run lint build compile backup restore docker-build docker-backup docker-restore
@@ -31,10 +32,13 @@ compile:
 	GOOS=linux GOARCH=amd64 go build -o bin/${BINARY_NAME}-linux-amd64 .
 
 backup: build
-	./bin/${BINARY_NAME} backup --path backups -d /s3path --compress
+	./bin/${BINARY_NAME} backup --path backups -d /s3path/backups --exclude readme.md -r
 
 restore: build
-	./bin/${BINARY_NAME} restore -d ./backups -f /s3path
+	./bin/${BINARY_NAME} restore -d backups -p /s3path/backups  --exclude s3safe.txt -r
+
+validate: build
+	./bin/${BINARY_NAME} validate
 
 docker-build:
 	docker build --build-arg appVersion=latest -t ${IMAGE_NAME} .
