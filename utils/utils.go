@@ -1,26 +1,26 @@
 /*
-MIT License
-
-Copyright (c) 2025 Jonas Kaninda
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
+ * MIT License
+ *
+ * Copyright (c) 2025 Jonas Kaninda
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 
 package utils
 
@@ -37,18 +37,18 @@ var (
 const (
 	appName    = "s3safe"
 	AppExample = `
-		Backup: s3safe backup --path /path/to/backup --dest /path/to/dest,
-		Restore: s3safe restore --path /s3path --dest /path/to/dest"`
+		Backup: s3safe backup --path /path/to/backup --dest /s3path/backups,
+		Restore: s3safe restore --path /s3path/backups --dest /path/to/dest"`
 
 	AppDescription = "A simple and secure backup tool for S3 storage" // appDesc is the description of the application)
 	BackupExample  = `
-		Backup: "s3safe backup --path /path/to/backup --dest /path/to/dest",
-		Backup a single file: "s3safe backup --file /path/to/file --dest /path/to/dest",
+		Backup: "s3safe backup --path /path/to/backup --dest /s3path/backups",
+		Backup a single file: "s3safe backup --file /path/to/data/tar.gz --dest /path/to/dest",
 		Backup with compression: "s3safe backup --path /path/to/backup --dest /path/to/dest --compress",
 		Backup with timestamp: "s3safe backup --path /path/to/backup --dest /path/to/dest --compress --timestamp"`
 	RestoreExample = `
 		Restore: "s3safe restore --path /s3path --file backup.tar.gz --dest /path/to/dest",
-		Restore a single file with decompression: "s3safe restore --path /s3path --file backup.tar.gz --dest /path/to/dest --decompress",`
+		Restore a single file with decompression: "s3safe restore --path /s3path/backups --file backup.tar.gz --dest /path/to/dest --decompress",`
 	RegionEnv        = "AWS_REGION"
 	KeyIDEnv         = "AWS_ACCESS_KEY_ID"
 	SecretEnv        = "AWS_SECRET_KEY"

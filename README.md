@@ -1,93 +1,125 @@
-# S3Safe
-
-S3Safe is a simple and secure backup tool for S3 storage
+# S3Safe - Secure S3 Backup & Restore Tool
 
 [![GitHub Release](https://img.shields.io/github/v/release/jkaninda/s3safe)](https://github.com/jkaninda/s3safe/releases)
 [![Go Report Card](https://goreportcard.com/badge/github.com/jkaninda/s3safe)](https://goreportcard.com/report/github.com/jkaninda/s3safe)
 [![Go Reference](https://pkg.go.dev/badge/github.com/jkaninda/s3safe.svg)](https://pkg.go.dev/github.com/jkaninda/s3safe)
-![Docker Image Size (latest by date)](https://img.shields.io/docker/image-size/jkaninda/s3safe?style=flat-square)
+![Docker Image Size](https://img.shields.io/docker/image-size/jkaninda/s3safe?style=flat-square)
 ![Docker Pulls](https://img.shields.io/docker/pulls/jkaninda/s3safe?style=flat-square)
 
-## Features
-- Backup to S3 storage
-- Restore from S3 storage
-- Compress and decompress files
+S3Safe is a lightweight CLI tool for securely backing up and restoring data from Amazon S3 and S3-compatible storage.
 
-## Build
+## Key Features
+- **Secure transfers** to/from S3-compatible storage
+- **Compression support** (gzip/tar)
+- **Flexible operations**:
+    - Backup entire directories or single files
+    - Restore with optional decompression
+    - Recursive operations
+    - Exclusion patterns
+- **Docker support** for containerized environments
 
-```sh
-go build .
+## Installation
+```shell
+# Using Go
+go install github.com/jkaninda/s3safe@latest
+
+# Using Docker
+docker pull jkaninda/s3safe:latest
 ```
+
 ## Configuration
- Copy the `.env.example` file to `.env` and fill in the values.
+Copy `.env.example` to `.env` and configure your S3 credentials:
 
-Environment variables:
-
-```config
+```ini
 AWS_REGION=us-east-1
-AWS_ENDPOINT=https://s3.wasabisys.com
-AWS_ACCESS_KEY_ID=
-AWS_SECRET_KEY=
-AWS_BUCKET=
-AWS_FORCE_PATH="true"
-AWS_DISABLE_SSL="false"
+AWS_ENDPOINT=https://s3.wasabisys.com  # Leave blank for AWS S3
+AWS_ACCESS_KEY_ID=your_access_key
+AWS_SECRET_KEY=your_secret_key
+AWS_BUCKET=your_bucket_name
+AWS_FORCE_PATH="true"  # For path-style URLs
+AWS_DISABLE_SSL="false"  # Set "true" for non-HTTPS endpoints
 ```
 
-## Example
+## Command Reference
 
-### Backup
-When backing up, the `--compress` flag is used to compress the directory before uploading.
-And the `--dest` flag is used to specify the destination path in the S3 bucket.
+### Global Options
+| Option            | Short | Description                                          |
+|-------------------|-------|------------------------------------------------------|
+| `--exclude`       | `-e`  | Exclude files/directories (comma-separated patterns) |
+| `--recursive`     | `-r`  | Process directories recursively                      |
+| `--path`          | `-p`  | Source directory path                                |
+| `--dest`          | `-d`  | Destination path (in S3 or local filesystem)         |
+| `--file`          | `-f`  | Process single file instead of directory             |
+| `--ignore-errors` | `-i`  | Continue on errors during restore                    |
+| `--env-file`      |       | Custom environment file (default: .env)              |
+| `--help`          | `-h`  | Show help message                                    |
+| `--version`       | `-v`  | Show version information                             |
 
-The following command will compress the directory `./backups` and upload it to the S3 bucket, path `/s3path`:
-`compress` is for compressing the directory before uploading.
+### Backup Options
+| Option          | Short | Description                                |
+|-----------------|-------|--------------------------------------------|
+| `--compress`    | `-c`  | Compress before upload (creates .tar.gz)   |
+| `--timestamp`   | `-t`  | Add timestamp to compressed filename       |
 
-Without `compress`, all the files in the directory will be uploaded to the S3 bucket.
+### Restore Options
+| Option          | Short | Description                                |
+|-----------------|-------|--------------------------------------------|
+| `--decompress`  | `-D`  | Decompress after download                  |
+
+## Usage Examples
+
+### Backup Operations
+
+**Backup directory (compressed):**
+```shell
+s3safe backup -p ./backups -d /s3path --compress --timestamp
+```
+
+**Backup single file:**
 
 ```shell
-s3safe backup -p backups -d /s3path --compress
+s3safe backup --file data.db --dest /s3path/db-backups --compress
 ```
-### Backup a single file
-The following command will compress the file `./backups/file.txt` and upload it to the S3 bucket, path `/s3path`:
+
+**Non-compressed directory backup:**
+```shell
+s3safe backup -p ./backups -d /s3path/backups -r
+```
+
+### Restore Operations
+**Restore compressed backup:**
+```shell
+s3safe restore -p /s3path/backup.tar.gz -d ./backups --decompress
+```
+
+**Restore directory (recursive):**
 
 ```shell
-s3safe backup --file backups/file.txt --dest /s3path --compress
+s3safe restore --path /s3path --dest ./backups --recursive
 ```
 
-### Restore
-
-When restoring, the `--decompress` flag is used to decompress the file after downloading.
-And the `--dest` flag is used to specify the destination directory where the file will be restored.
-
-The following command will download the file from the S3 bucket, path `/s3path` and decompress it to the directory `./backups`:
-
-All the files in the s3 path will be downloaded to the directory `./backups`:
-
+### Docker Usage
+**Backup with Docker:**
 ```shell
-s3safe restore -p backups -d /s3path
+docker run --rm --env-file .env \
+  -v "./backups:/backups" \
+  jkaninda/s3safe:latest \
+  backup --path /backups -d s3path --compress
 ```
-### Restore a single file
-The following command will download the file from the S3 bucket, path `/s3path` and decompress it to the directory `./backups`:
 
+**Restore with Docker:**
 ```shell
-s3safe restore --file s3path/file.txt --dest backups
+docker run --rm --env-file .env \
+  -v "./restored:/restored" \
+  jkaninda/s3safe:latest \
+  restore --path s3path/backup.tar.gz -d /restored --decompress
 ```
 
-### Restore a single file with decompressing
+## License
+MIT License - See [LICENSE](LICENSE) for details.
 
-The following command will download the file from the S3 bucket, path `/s3path` and decompress it to the directory `./backups`:
+## Contributing
+Contributions welcome! Please open an issue or PR on [GitHub](https://github.com/jkaninda/s3safe).
 
-```shell
-s3safe restore --file s3path/backups-2025-05-18_09-18-42.tar.gz --dest backups --decompress
-```
+### Compyright (c) 2025 Jonas Kaninda
 
-### Backup using Docker
-
-```shell
-	docker run --rm --env-file .env --name s3safe -v "./backups:/backups" jkaninda/s3safe:latest backup --path /backups -d s3path --compress
-```
-### Restore using Docker
-
-```shell
-    docker run --rm --env-file .env --name s3safe -v "./backups:/backups" jkaninda/s3safe:latest restore --path s3path -d /backups --decompress
-```

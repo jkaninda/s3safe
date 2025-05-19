@@ -26,30 +26,20 @@ package cmd
 
 import (
 	"github.com/jkaninda/s3safe/pkg"
-	"github.com/jkaninda/s3safe/utils"
 	"github.com/spf13/cobra"
 	"log/slog"
 	"os"
 )
 
-var BackupCmd = &cobra.Command{
-	Use:     "backup ",
-	Short:   "Backup data ",
-	Example: utils.BackupExample,
+var ValidateCmd = &cobra.Command{
+	Use:     "validate ",
+	Short:   "Validate configuration ",
+	Example: " s3safe validate",
 	Run: func(cmd *cobra.Command, args []string) {
-		err := pkg.Backup(cmd)
+		err := pkg.Validate(cmd)
 		if err != nil {
-			slog.Error("Backup error", "error", err)
+			slog.Error("Validate error", "error", err)
 			os.Exit(1)
 		}
 	},
-}
-
-func init() {
-	// Backup
-	BackupCmd.PersistentFlags().BoolP("compress", "c", false, "Enable backup compression")
-	BackupCmd.PersistentFlags().BoolP("timestamp", "t", false, "Enable timestamp in backup file name, only for compression")
-	BackupCmd.PersistentFlags().StringP("path", "p", "", "Storage path`")
-	BackupCmd.PersistentFlags().StringP("dest", "d", "", "S3 destination path`")
-	BackupCmd.PersistentFlags().StringP("file", "f", "", "Backup a single file`")
 }
