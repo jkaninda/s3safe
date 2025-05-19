@@ -38,6 +38,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 )
 
@@ -88,6 +89,10 @@ func Backup(cmd *cobra.Command) error {
 		}
 		// Upload the files
 		for _, file := range files {
+			if slices.Contains(c.Ignore, file.Key) {
+				slog.Info("Ignoring file", "file", file.Key)
+				continue
+			}
 			if file.IsDir {
 				// check if the compression is enabled
 				continue
@@ -150,14 +155,26 @@ func Restore(cmd *cobra.Command) error {
 	}
 	// Download the files
 	for _, file := range files {
+		if slices.Contains(c.Ignore, removePrefix(file.Key, c.Path)) {
+			slog.Info("Ignoring file", "file", removePrefix(file.Key, c.Path))
+			continue
+		}
 		err = s3Storage.Download(file.Key, filepath.Join(c.Dest, removePrefix(file.Key, c.Path)))
 		if err != nil {
+			if c.IgnoreErrors {
+				slog.Error("Ignoring error", "error", err)
+				continue
+			}
 			return fmt.Errorf("failed to download file: %w", err)
 		}
 		// Check if the file is compressed and decompress it
 		if c.Decompress && isCompressed(filepath.Join(c.Dest, removePrefix(file.Key, c.Path))) {
 			err = decompressDirectory(filepath.Join(c.Dest, removePrefix(file.Key, c.Path)), c.Dest)
 			if err != nil {
+				if c.IgnoreErrors {
+					slog.Error("Ignoring error", "error", err)
+					continue
+				}
 				return fmt.Errorf("failed to decompress file: %w", err)
 			}
 			slog.Info("Decompressed file", "file", file.Key)
@@ -293,16 +310,6 @@ func ListFile(path string) ([]Item, error) {
 	}
 
 	return files, nil
-}
-
-func removePrefix(path, prefix string) string {
-	if len(path) < len(prefix) {
-		return path
-	}
-	if path[:len(prefix)] == prefix {
-		return path[len(prefix):]
-	}
-	return path
 }
 
 // compressDirectory compresses a directory into a tar.gz file
@@ -487,6 +494,27 @@ func isCompressed(filePath string) bool {
 	}
 
 	return string(buf[:2]) == "\x1f\x8b"
+}
+
+// // Check if file has relative path
+func isRelativePath(filePath string) bool {
+	return !filepath.IsAbs(filePath)
+}
+
+// IsAbsolutePath checks if a given path is absolute.
+func IsAbsolutePath(path string) bool {
+	return filepath.IsAbs(path)
+}
+
+// removePrefix removes the prefix from the file path
+func removePrefix(filePath, prefix string) string {
+	if len(filePath) < len(prefix) {
+		return filePath
+	}
+	if filePath[:len(prefix)] == prefix {
+		return filePath[len(prefix):]
+	}
+	return filePath
 }
 
 // intro prints the intro message

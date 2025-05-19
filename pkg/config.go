@@ -33,6 +33,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -55,7 +56,9 @@ type Config struct {
 	Compress      bool
 	Decompress    bool
 	Timestamp     bool
+	IgnoreErrors  bool
 	RetentionDays int
+	Ignore        []string
 }
 
 type S3Storage struct {
@@ -75,6 +78,9 @@ func (c *Config) NewConfig(cmd *cobra.Command) *Config {
 	c.Compress, _ = cmd.Flags().GetBool("compress")
 	c.Decompress, _ = cmd.Flags().GetBool("decompress")
 	c.Timestamp, _ = cmd.Flags().GetBool("timestamp")
+	c.IgnoreErrors, _ = cmd.Flags().GetBool("ignore-errors")
+	ignores, _ := cmd.Flags().GetString("ignore")
+	c.Ignore = strings.Split(ignores, ",")
 	c.Region = utils.Env(utils.RegionEnv)
 	c.Bucket = utils.Env(utils.BucketEnv)
 	c.KeyID = utils.Env(utils.KeyIDEnv)
