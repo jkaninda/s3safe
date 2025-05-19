@@ -35,7 +35,7 @@ backup: build
 	./bin/${BINARY_NAME} backup --path backups -d /s3path/backups --exclude readme.md -r
 
 restore: build
-	./bin/${BINARY_NAME} restore -d backups -p /s3path/backups  --exclude s3safe.txt -r
+	./bin/${BINARY_NAME} restore -d backups -p /s3path/backups  --exclude s3safe.txt -r --force
 
 validate: build
 	./bin/${BINARY_NAME} validate

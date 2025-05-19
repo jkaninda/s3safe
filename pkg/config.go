@@ -63,6 +63,7 @@ type Config struct {
 	Timestamp     bool
 	IgnoreErrors  bool
 	Recursive     bool
+	Force         bool
 	RetentionDays int
 	Exclude       []string
 	EnvFile       string
@@ -92,6 +93,7 @@ func (c *Config) NewConfig(cmd *cobra.Command) *Config {
 	c.Timestamp, _ = cmd.Flags().GetBool("timestamp")
 	c.IgnoreErrors, _ = cmd.Flags().GetBool("ignore-errors")
 	c.Recursive, _ = cmd.Flags().GetBool("recursive")
+	c.Force, _ = cmd.Flags().GetBool("force")
 	exclude, _ := cmd.Flags().GetString("exclude")
 	c.Exclude = strings.Split(exclude, ",")
 	c.Region = utils.Env(utils.RegionEnv)

@@ -51,6 +51,7 @@ func init() {
 	RestoreCmd.PersistentFlags().StringP("dest", "d", "", "Destination path`")
 	RestoreCmd.PersistentFlags().StringP("file", "f", "", "File to restore`")
 	RestoreCmd.PersistentFlags().BoolP("decompress", "D", false, "Enable decompression, only for compressed file, when using --file flag")
-	RestoreCmd.PersistentFlags().BoolP("ignore-errors", "", false, "Ignore errors when restoring files")
+	RestoreCmd.PersistentFlags().BoolP("ignore-errors", "i", false, "Ignore errors when restoring files")
+	RestoreCmd.PersistentFlags().BoolP("force", "", false, "Force restore to destination path, overwrite existing files")
 
 }
