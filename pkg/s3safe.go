@@ -83,7 +83,7 @@ func Backup(cmd *cobra.Command) error {
 			return nil
 		}
 		// List the files
-		files, err := ListFile(c.Path)
+		files, err := ListFile(c.Path, c.Recursive)
 		if err != nil {
 			return fmt.Errorf("failed to list files: %w", err)
 		}
@@ -280,36 +280,53 @@ func (s S3Storage) List(path string) ([]Item, error) {
 	return files, nil
 }
 
-// ListFile lists files in the local directory
-func ListFile(path string) ([]Item, error) {
-	files := make([]Item, 0)
+// ListFile lists files in the local directory, optionally recursively.
+func ListFile(path string, recursive bool) ([]Item, error) {
+	var files []Item
 
-	dir, err := os.Open(path)
+	err := walkDir(path, path, recursive, &files)
 	if err != nil {
-		return files, fmt.Errorf("could not open directory: %w", err)
-	}
-	defer func(dir *os.File) {
-		err := dir.Close()
-		if err != nil {
-			fmt.Printf("error closing directory: %v\n", err)
-		}
-	}(dir)
-
-	fileInfos, err := dir.Readdir(-1)
-	if err != nil {
-		return files, fmt.Errorf("could not read directory: %w", err)
-	}
-
-	for _, fileInfo := range fileInfos {
-		file := Item{
-			Key:          fileInfo.Name(),
-			LastModified: fileInfo.ModTime(),
-			IsDir:        fileInfo.IsDir(),
-		}
-		files = append(files, file)
+		return files, err
 	}
 
 	return files, nil
+}
+
+// walkDir is a recursive helper to collect items.
+func walkDir(root, current string, recursive bool, files *[]Item) error {
+	entries, err := os.ReadDir(current)
+	if err != nil {
+		return fmt.Errorf("could not read directory %q: %w", current, err)
+	}
+
+	for _, entry := range entries {
+		fullPath := filepath.Join(current, entry.Name())
+
+		info, err := entry.Info()
+		if err != nil {
+			return fmt.Errorf("could not get file info for %q: %w", fullPath, err)
+		}
+
+		relPath, err := filepath.Rel(root, fullPath)
+		if err != nil {
+			return fmt.Errorf("could not determine relative path: %w", err)
+		}
+
+		*files = append(*files, Item{
+			Key:          relPath,
+			LastModified: info.ModTime(),
+			IsDir:        info.IsDir(),
+		})
+
+		// If recursive and it's a directory, go deeper
+		if recursive && info.IsDir() {
+			if err := walkDir(root, fullPath, recursive, files); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 // compressDirectory compresses a directory into a tar.gz file

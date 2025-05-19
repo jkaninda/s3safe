@@ -57,6 +57,7 @@ type Config struct {
 	Decompress    bool
 	Timestamp     bool
 	IgnoreErrors  bool
+	Recursive     bool
 	RetentionDays int
 	Exclude       []string
 }
@@ -79,6 +80,7 @@ func (c *Config) NewConfig(cmd *cobra.Command) *Config {
 	c.Decompress, _ = cmd.Flags().GetBool("decompress")
 	c.Timestamp, _ = cmd.Flags().GetBool("timestamp")
 	c.IgnoreErrors, _ = cmd.Flags().GetBool("ignore-errors")
+	c.Recursive, _ = cmd.Flags().GetBool("recursive")
 	exclude, _ := cmd.Flags().GetString("exclude")
 	c.Exclude = strings.Split(exclude, ",")
 	c.Region = utils.Env(utils.RegionEnv)

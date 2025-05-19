@@ -50,6 +50,8 @@ func Execute() {
 
 func init() {
 	rootCmd.PersistentFlags().StringP("exclude", "e", "", "Exclude files or directories matching the given pattern, comma separated")
+	rootCmd.PersistentFlags().BoolP("recursive", "r", false, "Recursively backup or restore files")
+
 	rootCmd.AddCommand(BackupCmd)
 	rootCmd.AddCommand(RestoreCmd)
 }
