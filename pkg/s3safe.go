@@ -139,7 +139,7 @@ func Restore(cmd *cobra.Command) error {
 	// Check if is a single file
 	if c.File != "" {
 		// Download the file
-		err = s3Storage.Download(filepath.Join(c.Path, c.File), filepath.Join(c.Dest, c.File))
+		err = s3Storage.Download(filepath.Join(c.Path, c.File), filepath.Join(c.Dest, c.File), c.Force)
 		if err != nil {
 			return fmt.Errorf("failed to download file: %w", err)
 		}
@@ -171,7 +171,7 @@ func Restore(cmd *cobra.Command) error {
 		if file.IsDir {
 			continue
 		}
-		err = s3Storage.Download(file.Key, filepath.Join(c.Dest, removePrefix(file.Key, c.Path)))
+		err = s3Storage.Download(file.Key, filepath.Join(c.Dest, removePrefix(file.Key, c.Path)), c.Force)
 		if err != nil {
 			if c.IgnoreErrors {
 				slog.Warn("Ignoring error", "error", err)
@@ -229,13 +229,20 @@ func (s S3Storage) Upload(path string, target string) error {
 	return nil
 }
 
-func (s S3Storage) Download(path string, dest string) error {
+func (s S3Storage) Download(path string, dest string, force bool) error {
 	// Check if the destination path exists
 	destPath := filepath.Dir(dest)
 	if _, err := os.Stat(destPath); os.IsNotExist(err) {
 		err := os.MkdirAll(destPath, os.ModePerm)
 		if err != nil {
 			return fmt.Errorf("failed to create destination directory: %w", err)
+		}
+	}
+	// Check if the file already exists
+	if !force {
+		if _, err := os.Stat(dest); err == nil {
+			slog.Warn("File already exists, use --force to overwrite, skipping download", "file", dest)
+			return nil
 		}
 	}
 	file, err := os.Create(dest)

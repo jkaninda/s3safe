@@ -62,9 +62,10 @@ AWS_DISABLE_SSL="false"  # Set "true" for non-HTTPS endpoints
 | `--timestamp`   | `-t`  | Add timestamp to compressed filename       |
 
 ### Restore Options
-| Option          | Short | Description                                |
-|-----------------|-------|--------------------------------------------|
-| `--decompress`  | `-D`  | Decompress after download                  |
+| Option         | Short | Description                                                 |
+|----------------|-------|-------------------------------------------------------------|
+| `--decompress` | `-D`  | Decompress after download                                   |
+| `--force`      |       | Force restore to destination path, overwrite existing files |
 
 ## Usage Examples
 
@@ -119,7 +120,9 @@ docker run --rm --env-file .env \
 MIT License - See [LICENSE](LICENSE) for details.
 
 ## Contributing
-Contributions welcome! Please open an issue or PR on [GitHub](https://github.com/jkaninda/s3safe).
+Contributions welcome! Please open an issue or PR on [GitHub](https://github.com/jkaninda/s3safe)
 
+
+---
 ### Compyright (c) 2025 Jonas Kaninda
 
