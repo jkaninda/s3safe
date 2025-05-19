@@ -22,36 +22,30 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-package cmd
+package pkg
 
-import (
-	"github.com/jkaninda/s3safe/utils"
-	"github.com/spf13/cobra"
-	"os"
-)
+import "testing"
 
-// rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
-	Use:     "s3safe [Command]",
-	Short:   "S3safe backup and restore files",
-	Long:    utils.AppDescription,
-	Example: utils.AppExample,
-	Version: utils.Version,
-}
-
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
-	err := rootCmd.Execute()
-	if err != nil {
-		os.Exit(1)
+func TestRemovePrefix(t *testing.T) {
+	file := "path/to/file.txt"
+	prefix := "path/to"
+	expected := "file.txt"
+	result := removePrefix(file, prefix)
+	if result != expected {
+		t.Errorf("Expected %s, but got %s", expected, result)
 	}
 }
 
-func init() {
-	rootCmd.PersistentFlags().StringP("exclude", "e", "", "Exclude files or directories matching the given pattern, comma separated")
-	rootCmd.PersistentFlags().BoolP("recursive", "r", false, "Recursively backup or restore files")
+func TestIsRelativePath(t *testing.T) {
+	relativePath := "path/to/file.txt"
+	absolutePath := "/absolute/path/to/file.txt"
 
-	rootCmd.AddCommand(BackupCmd)
-	rootCmd.AddCommand(RestoreCmd)
+	if !isRelativePath(relativePath) {
+		t.Errorf("Expected %s to be a relative path", relativePath)
+	}
+
+	if isRelativePath(absolutePath) {
+		t.Errorf("Expected %s to not be a relative path", absolutePath)
+	}
+
 }

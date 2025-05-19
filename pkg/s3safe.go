@@ -38,6 +38,8 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"time"
 )
 
@@ -82,12 +84,17 @@ func Backup(cmd *cobra.Command) error {
 			return nil
 		}
 		// List the files
-		files, err := ListFile(c.Path)
+		files, err := ListFile(c.Path, c.Recursive)
 		if err != nil {
 			return fmt.Errorf("failed to list files: %w", err)
 		}
 		// Upload the files
 		for _, file := range files {
+			fileName := filepath.Base(file.Key)
+			if slices.Contains(c.Exclude, fileName) {
+				slog.Warn("Ignoring file", "file", file.Key)
+				continue
+			}
 			if file.IsDir {
 				// check if the compression is enabled
 				continue
@@ -144,20 +151,37 @@ func Restore(cmd *cobra.Command) error {
 		return nil
 	}
 	// List the files
-	files, err := s3Storage.List(c.Path)
+	files, err := s3Storage.List(c.Path, c.Recursive)
 	if err != nil {
 		return fmt.Errorf("failed to list files: %w", err)
 	}
 	// Download the files
 	for _, file := range files {
+		fileName := filepath.Base(file.Key)
+		if slices.Contains(c.Exclude, fileName) {
+			slog.Warn("Ignoring file", "file", fileName)
+			continue
+		}
+		// Check if the item is a directory
+		if file.IsDir {
+			continue
+		}
 		err = s3Storage.Download(file.Key, filepath.Join(c.Dest, removePrefix(file.Key, c.Path)))
 		if err != nil {
+			if c.IgnoreErrors {
+				slog.Warn("Ignoring error", "error", err)
+				continue
+			}
 			return fmt.Errorf("failed to download file: %w", err)
 		}
 		// Check if the file is compressed and decompress it
 		if c.Decompress && isCompressed(filepath.Join(c.Dest, removePrefix(file.Key, c.Path))) {
 			err = decompressDirectory(filepath.Join(c.Dest, removePrefix(file.Key, c.Path)), c.Dest)
 			if err != nil {
+				if c.IgnoreErrors {
+					slog.Warn("Ignoring error", "error", err)
+					continue
+				}
 				return fmt.Errorf("failed to decompress file: %w", err)
 			}
 			slog.Info("Decompressed file", "file", file.Key)
@@ -201,6 +225,14 @@ func (s S3Storage) Upload(path string, target string) error {
 }
 
 func (s S3Storage) Download(path string, dest string) error {
+	// Check if the destination path exists
+	destPath := filepath.Dir(dest)
+	if _, err := os.Stat(destPath); os.IsNotExist(err) {
+		err := os.MkdirAll(destPath, os.ModePerm)
+		if err != nil {
+			return fmt.Errorf("failed to create destination directory: %w", err)
+		}
+	}
 	file, err := os.Create(dest)
 	if err != nil {
 		return fmt.Errorf("download error: %w", err)
@@ -226,31 +258,64 @@ func (s S3Storage) Download(path string, dest string) error {
 	return nil
 }
 
-func (s S3Storage) List(path string) ([]Item, error) {
+func (s S3Storage) List(path string, recursive bool) ([]Item, error) {
 	svc := s3.New(s.session)
-
 	files := make([]Item, 0)
 
+	// Ensure the path ends with a slash for proper folder listing
+	if path != "" && !strings.HasSuffix(path, "/") {
+		path += "/"
+	}
+
 	var contToken *string
+	var delimiter *string
+
+	// Only use delimiter for non-recursive listing
+	if !recursive {
+		delimiter = aws.String("/")
+	}
 
 	for {
-		resp, err := svc.ListObjectsV2(&s3.ListObjectsV2Input{
+		input := &s3.ListObjectsV2Input{
 			Bucket:            aws.String(s.bucket),
 			Prefix:            aws.String(path),
 			ContinuationToken: contToken,
-		})
+		}
 
+		if delimiter != nil {
+			input.Delimiter = delimiter
+		}
+
+		resp, err := svc.ListObjectsV2(input)
 		if err != nil {
 			return files, fmt.Errorf("could not list items in S3 bucket %s: %w", s.bucket, err)
 		}
 
+		// Process actual files
 		for _, item := range resp.Contents {
+			// Skip the directory marker itself (the path with trailing slash)
+			if *item.Key == path {
+				continue
+			}
+
 			file := Item{
 				Key:          *item.Key,
 				LastModified: *item.LastModified,
+				IsDir:        *item.Size == 0 && strings.HasSuffix(*item.Key, "/"),
 			}
 
 			files = append(files, file)
+		}
+
+		// Only process common prefixes (folders) in non-recursive mode
+		if !recursive {
+			for _, prefix := range resp.CommonPrefixes {
+				files = append(files, Item{
+					Key:          *prefix.Prefix,
+					LastModified: time.Time{},
+					IsDir:        true,
+				})
+			}
 		}
 
 		if !*resp.IsTruncated {
@@ -260,49 +325,71 @@ func (s S3Storage) List(path string) ([]Item, error) {
 		contToken = resp.NextContinuationToken
 	}
 
+	// If recursive and we found folders (items ending with /), list them too
+	if recursive {
+		var subDirs []Item
+		for _, file := range files {
+			if file.IsDir {
+				subFiles, err := s.List(file.Key, true)
+				if err != nil {
+					return files, err
+				}
+				subDirs = append(subDirs, subFiles...)
+			}
+		}
+		files = append(files, subDirs...)
+	}
+
 	return files, nil
 }
 
-// ListFile lists files in the local directory
-func ListFile(path string) ([]Item, error) {
-	files := make([]Item, 0)
+// ListFile lists files in the local directory, optionally recursively.
+func ListFile(path string, recursive bool) ([]Item, error) {
+	var files []Item
 
-	dir, err := os.Open(path)
+	err := walkDir(path, path, recursive, &files)
 	if err != nil {
-		return files, fmt.Errorf("could not open directory: %w", err)
+		return files, err
 	}
-	defer func(dir *os.File) {
-		err := dir.Close()
+
+	return files, nil
+}
+
+// walkDir is a recursive helper to collect items.
+func walkDir(root, current string, recursive bool, files *[]Item) error {
+	entries, err := os.ReadDir(current)
+	if err != nil {
+		return fmt.Errorf("could not read directory %q: %w", current, err)
+	}
+
+	for _, entry := range entries {
+		fullPath := filepath.Join(current, entry.Name())
+
+		info, err := entry.Info()
 		if err != nil {
-			fmt.Printf("error closing directory: %v\n", err)
+			return fmt.Errorf("could not get file info for %q: %w", fullPath, err)
 		}
-	}(dir)
 
-	fileInfos, err := dir.Readdir(-1)
-	if err != nil {
-		return files, fmt.Errorf("could not read directory: %w", err)
-	}
-
-	for _, fileInfo := range fileInfos {
-		file := Item{
-			Key:          fileInfo.Name(),
-			LastModified: fileInfo.ModTime(),
-			IsDir:        fileInfo.IsDir(),
+		relPath, err := filepath.Rel(root, fullPath)
+		if err != nil {
+			return fmt.Errorf("could not determine relative path: %w", err)
 		}
-		files = append(files, file)
+
+		*files = append(*files, Item{
+			Key:          relPath,
+			LastModified: info.ModTime(),
+			IsDir:        info.IsDir(),
+		})
+
+		// If recursive and it's a directory, go deeper
+		if recursive && info.IsDir() {
+			if err := walkDir(root, fullPath, recursive, files); err != nil {
+				return err
+			}
+		}
 	}
 
-	return files, nil
-}
-
-func removePrefix(path, prefix string) string {
-	if len(path) < len(prefix) {
-		return path
-	}
-	if path[:len(prefix)] == prefix {
-		return path[len(prefix):]
-	}
-	return path
+	return nil
 }
 
 // compressDirectory compresses a directory into a tar.gz file
@@ -487,6 +574,27 @@ func isCompressed(filePath string) bool {
 	}
 
 	return string(buf[:2]) == "\x1f\x8b"
+}
+
+// // Check if file has relative path
+func isRelativePath(filePath string) bool {
+	return !filepath.IsAbs(filePath)
+}
+
+// IsAbsolutePath checks if a given path is absolute.
+func IsAbsolutePath(path string) bool {
+	return filepath.IsAbs(path)
+}
+
+// removePrefix removes the prefix from the file path
+func removePrefix(filePath, prefix string) string {
+	if len(filePath) < len(prefix) {
+		return filePath
+	}
+	if filePath[:len(prefix)] == prefix {
+		return filePath[len(prefix):]
+	}
+	return filePath
 }
 
 // intro prints the intro message

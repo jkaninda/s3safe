@@ -84,10 +84,10 @@ s3safe restore --file s3path/backups-2025-05-18_09-18-42.tar.gz --dest backups -
 ### Backup using Docker
 
 ```shell
-	docker run --rm --env-file .env --name s3safe -v "./backups:/backups" jkaninda/s3safe:latest backup --path backups -d /s3path --compress
+	docker run --rm --env-file .env --name s3safe -v "./backups:/backups" jkaninda/s3safe:latest backup --path /backups -d s3path --compress
 ```
 ### Restore using Docker
 
 ```shell
-    docker run --rm --env-file .env --name s3safe -v "./backups:/backups" jkaninda/s3safe:latest restore --path backups -d /s3path --decompress
+    docker run --rm --env-file .env --name s3safe -v "./backups:/backups" jkaninda/s3safe:latest restore --path s3path -d /backups --decompress
 ```
