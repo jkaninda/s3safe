@@ -15,11 +15,11 @@ ENV TZ=UTC
 ARG appVersion=""
 ENV VERSION=${appVersion}
 LABEL org.opencontainers.image.title="s3safe"
-LABEL org.opencontainers.image.description="A simple and secure backup tool for S3 storage"
+LABEL org.opencontainers.image.description="S3Safe is a lightweight CLI tool for securely backing up and restoring data from Amazon S3 and S3-compatible storage"
 LABEL org.opencontainers.image.licenses="MIT"
-LABEL org.opencontainers.image.authors="Jonas Kaninda <me@jonaskaninda.dev>"
+LABEL org.opencontainers.image.authors="Jonas Kaninda <me@jkaninda.dev>"
 LABEL org.opencontainers.image.version=${appVersion}
-LABEL org.opencontainers.image.source="github.com/jkaninda/s3safe"
+LABEL org.opencontainers.image.source="https://github.com/jkaninda/s3safe"
 
 RUN apk --update add --no-cache tzdata ca-certificates
 COPY --from=build /app/s3safe /usr/local/bin/s3safe

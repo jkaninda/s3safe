@@ -120,3 +120,6 @@ MIT License - See [LICENSE](LICENSE) for details.
 
 ## Contributing
 Contributions welcome! Please open an issue or PR on [GitHub](https://github.com/jkaninda/s3safe).
+
+### Compyright (c) 2025 Jonas Kaninda
+
