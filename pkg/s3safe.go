@@ -89,7 +89,7 @@ func Backup(cmd *cobra.Command) error {
 		}
 		// Upload the files
 		for _, file := range files {
-			if slices.Contains(c.Ignore, file.Key) {
+			if slices.Contains(c.Exclude, file.Key) {
 				slog.Info("Ignoring file", "file", file.Key)
 				continue
 			}
@@ -155,7 +155,7 @@ func Restore(cmd *cobra.Command) error {
 	}
 	// Download the files
 	for _, file := range files {
-		if slices.Contains(c.Ignore, removePrefix(file.Key, c.Path)) {
+		if slices.Contains(c.Exclude, removePrefix(file.Key, c.Path)) {
 			slog.Info("Ignoring file", "file", removePrefix(file.Key, c.Path))
 			continue
 		}

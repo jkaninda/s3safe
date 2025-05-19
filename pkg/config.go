@@ -58,7 +58,7 @@ type Config struct {
 	Timestamp     bool
 	IgnoreErrors  bool
 	RetentionDays int
-	Ignore        []string
+	Exclude       []string
 }
 
 type S3Storage struct {
@@ -79,8 +79,8 @@ func (c *Config) NewConfig(cmd *cobra.Command) *Config {
 	c.Decompress, _ = cmd.Flags().GetBool("decompress")
 	c.Timestamp, _ = cmd.Flags().GetBool("timestamp")
 	c.IgnoreErrors, _ = cmd.Flags().GetBool("ignore-errors")
-	ignores, _ := cmd.Flags().GetString("ignore")
-	c.Ignore = strings.Split(ignores, ",")
+	exclude, _ := cmd.Flags().GetString("exclude")
+	c.Exclude = strings.Split(exclude, ",")
 	c.Region = utils.Env(utils.RegionEnv)
 	c.Bucket = utils.Env(utils.BucketEnv)
 	c.KeyID = utils.Env(utils.KeyIDEnv)

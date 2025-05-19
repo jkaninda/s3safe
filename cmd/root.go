@@ -49,7 +49,7 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringP("ignore", "i", "", "Ignore files or directories matching the given pattern, comma separated")
+	rootCmd.PersistentFlags().StringP("exclude", "e", "", "Exclude files or directories matching the given pattern, comma separated")
 	rootCmd.AddCommand(BackupCmd)
 	rootCmd.AddCommand(RestoreCmd)
 }
