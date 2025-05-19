@@ -39,6 +39,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"time"
 )
 
@@ -89,8 +90,9 @@ func Backup(cmd *cobra.Command) error {
 		}
 		// Upload the files
 		for _, file := range files {
-			if slices.Contains(c.Exclude, file.Key) {
-				slog.Info("Ignoring file", "file", file.Key)
+			fileName := filepath.Base(file.Key)
+			if slices.Contains(c.Exclude, fileName) {
+				slog.Warn("Ignoring file", "file", file.Key)
 				continue
 			}
 			if file.IsDir {
@@ -149,20 +151,25 @@ func Restore(cmd *cobra.Command) error {
 		return nil
 	}
 	// List the files
-	files, err := s3Storage.List(c.Path)
+	files, err := s3Storage.List(c.Path, c.Recursive)
 	if err != nil {
 		return fmt.Errorf("failed to list files: %w", err)
 	}
 	// Download the files
 	for _, file := range files {
-		if slices.Contains(c.Exclude, removePrefix(file.Key, c.Path)) {
-			slog.Info("Ignoring file", "file", removePrefix(file.Key, c.Path))
+		fileName := filepath.Base(file.Key)
+		if slices.Contains(c.Exclude, fileName) {
+			slog.Warn("Ignoring file", "file", fileName)
+			continue
+		}
+		// Check if the item is a directory
+		if file.IsDir {
 			continue
 		}
 		err = s3Storage.Download(file.Key, filepath.Join(c.Dest, removePrefix(file.Key, c.Path)))
 		if err != nil {
 			if c.IgnoreErrors {
-				slog.Error("Ignoring error", "error", err)
+				slog.Warn("Ignoring error", "error", err)
 				continue
 			}
 			return fmt.Errorf("failed to download file: %w", err)
@@ -172,7 +179,7 @@ func Restore(cmd *cobra.Command) error {
 			err = decompressDirectory(filepath.Join(c.Dest, removePrefix(file.Key, c.Path)), c.Dest)
 			if err != nil {
 				if c.IgnoreErrors {
-					slog.Error("Ignoring error", "error", err)
+					slog.Warn("Ignoring error", "error", err)
 					continue
 				}
 				return fmt.Errorf("failed to decompress file: %w", err)
@@ -218,6 +225,14 @@ func (s S3Storage) Upload(path string, target string) error {
 }
 
 func (s S3Storage) Download(path string, dest string) error {
+	// Check if the destination path exists
+	destPath := filepath.Dir(dest)
+	if _, err := os.Stat(destPath); os.IsNotExist(err) {
+		err := os.MkdirAll(destPath, os.ModePerm)
+		if err != nil {
+			return fmt.Errorf("failed to create destination directory: %w", err)
+		}
+	}
 	file, err := os.Create(dest)
 	if err != nil {
 		return fmt.Errorf("download error: %w", err)
@@ -243,31 +258,64 @@ func (s S3Storage) Download(path string, dest string) error {
 	return nil
 }
 
-func (s S3Storage) List(path string) ([]Item, error) {
+func (s S3Storage) List(path string, recursive bool) ([]Item, error) {
 	svc := s3.New(s.session)
-
 	files := make([]Item, 0)
 
+	// Ensure the path ends with a slash for proper folder listing
+	if path != "" && !strings.HasSuffix(path, "/") {
+		path += "/"
+	}
+
 	var contToken *string
+	var delimiter *string
+
+	// Only use delimiter for non-recursive listing
+	if !recursive {
+		delimiter = aws.String("/")
+	}
 
 	for {
-		resp, err := svc.ListObjectsV2(&s3.ListObjectsV2Input{
+		input := &s3.ListObjectsV2Input{
 			Bucket:            aws.String(s.bucket),
 			Prefix:            aws.String(path),
 			ContinuationToken: contToken,
-		})
+		}
 
+		if delimiter != nil {
+			input.Delimiter = delimiter
+		}
+
+		resp, err := svc.ListObjectsV2(input)
 		if err != nil {
 			return files, fmt.Errorf("could not list items in S3 bucket %s: %w", s.bucket, err)
 		}
 
+		// Process actual files
 		for _, item := range resp.Contents {
+			// Skip the directory marker itself (the path with trailing slash)
+			if *item.Key == path {
+				continue
+			}
+
 			file := Item{
 				Key:          *item.Key,
 				LastModified: *item.LastModified,
+				IsDir:        *item.Size == 0 && strings.HasSuffix(*item.Key, "/"),
 			}
 
 			files = append(files, file)
+		}
+
+		// Only process common prefixes (folders) in non-recursive mode
+		if !recursive {
+			for _, prefix := range resp.CommonPrefixes {
+				files = append(files, Item{
+					Key:          *prefix.Prefix,
+					LastModified: time.Time{},
+					IsDir:        true,
+				})
+			}
 		}
 
 		if !*resp.IsTruncated {
@@ -275,6 +323,21 @@ func (s S3Storage) List(path string) ([]Item, error) {
 		}
 
 		contToken = resp.NextContinuationToken
+	}
+
+	// If recursive and we found folders (items ending with /), list them too
+	if recursive {
+		var subDirs []Item
+		for _, file := range files {
+			if file.IsDir {
+				subFiles, err := s.List(file.Key, true)
+				if err != nil {
+					return files, err
+				}
+				subDirs = append(subDirs, subFiles...)
+			}
+		}
+		files = append(files, subDirs...)
 	}
 
 	return files, nil
