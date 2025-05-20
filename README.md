@@ -32,7 +32,7 @@ Copy `.env.example` to `.env` and configure your S3 credentials:
 
 ```ini
 AWS_REGION=us-east-1
-AWS_ENDPOINT=https://s3.wasabisys.com  # Leave blank for AWS S3
+AWS_ENDPOINT=https://s3.wasabisys.com
 AWS_ACCESS_KEY_ID=your_access_key
 AWS_SECRET_KEY=your_secret_key
 AWS_BUCKET=your_bucket_name
@@ -124,5 +124,5 @@ Contributions welcome! Please open an issue or PR on [GitHub](https://github.com
 
 
 ---
-### Compyright (c) 2025 Jonas Kaninda
+### Copyright (c) 2025 Jonas Kaninda
 
