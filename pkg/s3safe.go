@@ -47,15 +47,14 @@ func Backup(cmd *cobra.Command) error {
 	intro()
 	slog.Info("Backing up data...")
 	// New config
-	c := &Config{}
-	c.NewConfig(cmd)
+	c := NewConfig(cmd)
 
 	// Validate the config
-	if err := c.validate(); err != nil {
+	if err := c.Validate(); err != nil {
 		return fmt.Errorf("invalid config: %w", err)
 	}
 	// New S3 storage
-	s3Storage, err := c.newS3Storage()
+	s3Storage, err := c.NewS3Storage()
 	if err != nil {
 		return fmt.Errorf("failed to create S3 storage: %w", err)
 	}
@@ -118,10 +117,13 @@ func Restore(cmd *cobra.Command) error {
 	intro()
 	slog.Info("Restoring data...")
 	// New config
-	c := &Config{}
-	c.NewConfig(cmd)
+	c := NewConfig(cmd)
+	// Validate the config
+	if err := c.Validate(); err != nil {
+		return fmt.Errorf("invalid config: %w", err)
+	}
 	// New S3 storage
-	s3Storage, err := c.newS3Storage()
+	s3Storage, err := c.NewS3Storage()
 	if err != nil {
 		return fmt.Errorf("failed to create S3 storage: %w", err)
 	}
@@ -560,10 +562,10 @@ func decompressDirectory(sourceFile, destDir string) error {
 		}
 	}
 	// Delete the original file
-	err = os.Remove(sourceFile)
-	if err != nil {
-		slog.Error("error removing file", "file", sourceFile, "error", err)
-	}
+	// err = os.Remove(sourceFile)
+	// if err != nil {
+	//	slog.Error("error removing file", "file", sourceFile, "error", err)
+	// }
 	return nil
 }
 
@@ -615,10 +617,11 @@ func intro() {
 	fmt.Println("Copyright (c) 2025 Jonas Kaninda")
 }
 func Validate(cmd *cobra.Command) error {
-	c := &Config{}
-	c.NewConfig(cmd)
+	// New config
+	c := NewConfig(cmd)
+
 	// New S3 storage
-	err := c.validate()
+	err := c.Validate()
 	if err != nil {
 		return fmt.Errorf("invalid config: %w", err)
 	}

@@ -73,18 +73,40 @@ type S3Storage struct {
 	bucket  string
 	session *session.Session
 }
+
 type Item struct {
 	Key          string
 	LastModified time.Time
 	IsDir        bool
 }
 
-func (c *Config) NewConfig(cmd *cobra.Command) *Config {
+// NewConfig creates a new Config instance from cobra command flags
+func NewConfig(cmd *cobra.Command) *Config {
+	c := &Config{}
+
+	// Load environment variables first if specified
+	c.loadEnvironment(cmd)
+
+	// Load basic flags
+	c.loadBasicFlags(cmd)
+
+	// Load AWS configuration
+	c.loadAWSConfig()
+
+	// Process path and file configurations
+	c.processPaths()
+
+	return c
+}
+
+func (c *Config) loadEnvironment(cmd *cobra.Command) {
 	c.EnvFile, _ = cmd.Flags().GetString("env-file")
-	// Check if the EnvFile is set
 	if c.EnvFile != "" {
 		loadEnv(c.EnvFile)
 	}
+}
+
+func (c *Config) loadBasicFlags(cmd *cobra.Command) {
 	c.Path, _ = cmd.Flags().GetString("path")
 	c.Dest, _ = cmd.Flags().GetString("dest")
 	c.File, _ = cmd.Flags().GetString("file")
@@ -94,69 +116,88 @@ func (c *Config) NewConfig(cmd *cobra.Command) *Config {
 	c.IgnoreErrors, _ = cmd.Flags().GetBool("ignore-errors")
 	c.Recursive, _ = cmd.Flags().GetBool("recursive")
 	c.Force, _ = cmd.Flags().GetBool("force")
+
 	exclude, _ := cmd.Flags().GetString("exclude")
 	c.Exclude = strings.Split(exclude, ",")
+}
+
+func (c *Config) loadAWSConfig() {
 	c.Region = utils.Env(utils.RegionEnv)
-	c.Bucket = utils.Env(utils.BucketEnv)
 	c.KeyID = utils.Env(utils.KeyIDEnv)
 	c.Secret = utils.Env(utils.SecretEnv)
 	c.EndPoint = utils.Env(utils.EndPointEnv)
 	c.ForcePath = utils.Env(utils.ForcePathEnv) == "true"
 	c.DisableSSL = utils.Env(utils.DisableSSLEnv) == "true"
+
 	if c.EndPoint == "" {
 		c.EndPoint = utils.AwsS3Url
 	}
-	// Remove trailing slash
-	if len(c.Path) > 0 && c.Path[len(c.Path)-1] == '/' {
-		c.Path = c.Path[:len(c.Path)-1]
+
+	if c.Bucket == "" {
+		c.Bucket = utils.Env(utils.BucketEnv)
 	}
-	// Remove trailing slash
-	if len(c.Dest) > 0 && c.Dest[len(c.Dest)-1] == '/' {
-		c.Dest = c.Dest[:len(c.Dest)-1]
-	}
+}
+
+func (c *Config) processPaths() {
+	// Remove trailing slashes
+	c.Path = strings.TrimSuffix(c.Path, "/")
+	c.Dest = strings.TrimSuffix(c.Dest, "/")
+
+	// Handle file path processing
 	if c.File != "" && c.File != "." {
 		path := filepath.Join(c.Path, filepath.Dir(c.File))
 		file := filepath.Base(c.File)
 		c.File = file
 		c.Path = path
 	}
-	return c
 }
-func (c *Config) validate() error {
-	if c.Region == "" {
-		return fmt.Errorf("region is required, set AWS_REGION env variable")
-	}
-	if c.Bucket == "" {
-		return fmt.Errorf("bucket is required, set AWS_BUCKET env variable")
-	}
-	if c.KeyID == "" {
-		return fmt.Errorf("key id is required, set AWS_ACCESS_KEY_ID env variable")
-	}
-	if c.Secret == "" {
-		return fmt.Errorf("secret is required, set AWS_SECRET_KEY env variable")
-	}
-	if c.EndPoint == "" {
-		return fmt.Errorf("endpoint is required, set AWS_ENDPOINT env variable")
-	}
-	// Note: You had a duplicate check for EndPoint, I removed it
 
-	// Validate S3 connection
-	s3Storage, err := c.newS3Storage()
-	if err != nil {
-		return fmt.Errorf("failed to create S3 storage: %w", err)
+// Validate checks the configuration and ensures all required fields are present
+func (c *Config) Validate() error {
+	if err := c.validateRequiredFields(); err != nil {
+		return err
 	}
-	if _, err = bucketExists(s3.New(s3Storage.session), c.Bucket); err != nil {
-		return fmt.Errorf("failed to check bucket existence: %w", err)
+
+	return c.validateS3Connection()
+}
+
+func (c *Config) validateRequiredFields() error {
+	requiredFields := map[string]string{
+		c.Region:   "region is required, set AWS_REGION env variable",
+		c.Bucket:   "bucket is required, set AWS_BUCKET env variable",
+		c.KeyID:    "key id is required, set AWS_ACCESS_KEY_ID env variable",
+		c.Secret:   "secret is required, set AWS_SECRET_KEY env variable",
+		c.EndPoint: "endpoint is required, set AWS_ENDPOINT env variable",
+	}
+
+	for field, errMsg := range requiredFields {
+		if field == "" {
+			return errors.New(errMsg)
+		}
 	}
 
 	return nil
 }
-func (c *Config) newS3Storage() (*S3Storage, error) {
 
-	s3Storage := &S3Storage{
-		bucket: c.Bucket,
+func (c *Config) validateS3Connection() error {
+	s3Storage, err := c.NewS3Storage()
+	if err != nil {
+		return fmt.Errorf("failed to create S3 storage: %w", err)
 	}
-	// Create a new session
+
+	exists, err := bucketExists(s3.New(s3Storage.session), c.Bucket)
+	if err != nil {
+		return fmt.Errorf("failed to check bucket existence: %w", err)
+	}
+	if !exists {
+		return fmt.Errorf("bucket %s does not exist", c.Bucket)
+	}
+
+	return nil
+}
+
+// NewS3Storage creates a new S3Storage instance from the configuration
+func (c *Config) NewS3Storage() (*S3Storage, error) {
 	sess, err := session.NewSession(&aws.Config{
 		Region:           aws.String(c.Region),
 		Credentials:      credentials.NewStaticCredentials(c.KeyID, c.Secret, ""),
@@ -168,32 +209,33 @@ func (c *Config) newS3Storage() (*S3Storage, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create S3 session: %w", err)
 	}
-	s3Storage.session = sess
 
-	return s3Storage, nil
+	return &S3Storage{
+		bucket:  c.Bucket,
+		session: sess,
+	}, nil
 }
 
 func loadEnv(file string) {
 	slog.Info("Loading environment variables", "file", file)
-	// Load environment variables from .env file
-	err := godotenv.Load(file)
-	if err != nil {
+	if err := godotenv.Load(file); err != nil {
 		slog.Error("Error loading environment variable", "file", file, "error", err)
 	}
 }
+
 func bucketExists(s3Client *s3.S3, bucket string) (bool, error) {
 	_, err := s3Client.HeadBucket(&s3.HeadBucketInput{
 		Bucket: aws.String(bucket),
 	})
-	if err != nil {
-		// If the error is a 404, the bucket doesn't exist
-		var aErr awserr.RequestFailure
-		if errors.As(err, &aErr) {
-			if aErr.StatusCode() == http.StatusNotFound {
-				return false, nil
-			}
-		}
-		return false, err
+
+	if err == nil {
+		return true, nil
 	}
-	return true, nil
+
+	var aErr awserr.RequestFailure
+	if errors.As(err, &aErr) && aErr.StatusCode() == http.StatusNotFound {
+		return false, nil
+	}
+
+	return false, err
 }

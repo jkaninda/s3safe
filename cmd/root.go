@@ -52,6 +52,7 @@ func init() {
 	rootCmd.PersistentFlags().StringP("exclude", "e", "", "Exclude files/directories (comma-separated patterns)")
 	rootCmd.PersistentFlags().BoolP("recursive", "r", false, "Recursively backup or restore files")
 	rootCmd.PersistentFlags().StringP("env-file", "", "", "Custom environment file")
+	rootCmd.PersistentFlags().StringP("bucket", "", "", "S3 bucket name")
 	rootCmd.AddCommand(BackupCmd)
 	rootCmd.AddCommand(RestoreCmd)
 	rootCmd.AddCommand(ValidateCmd)
