@@ -52,6 +52,7 @@ AWS_DISABLE_SSL="false"  # Set "true" for non-HTTPS endpoints
 | `--file`          | `-f`  | Process single file instead of directory             |
 | `--ignore-errors` | `-i`  | Continue on errors during restore                    |
 | `--env-file`      |       | Custom environment file (default: .env)              |
+| `--bucket`        | `b`   | S3 bucket name                                       |
 | `--help`          | `-h`  | Show help message                                    |
 | `--version`       | `-v`  | Show version information                             |
 

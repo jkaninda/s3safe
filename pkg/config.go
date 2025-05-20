@@ -113,6 +113,7 @@ func (c *Config) loadBasicFlags(cmd *cobra.Command) {
 	c.Compress, _ = cmd.Flags().GetBool("compress")
 	c.Decompress, _ = cmd.Flags().GetBool("decompress")
 	c.Timestamp, _ = cmd.Flags().GetBool("timestamp")
+	c.Bucket, _ = cmd.Flags().GetString("bucket")
 	c.IgnoreErrors, _ = cmd.Flags().GetBool("ignore-errors")
 	c.Recursive, _ = cmd.Flags().GetBool("recursive")
 	c.Force, _ = cmd.Flags().GetBool("force")
