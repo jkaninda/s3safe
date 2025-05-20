@@ -49,6 +49,8 @@ const (
 	RestoreExample = `
 		Restore: "s3safe restore --path /s3path --file backup.tar.gz --dest /path/to/dest",
 		Restore a single file with decompression: "s3safe restore --path /s3path/backups --file backup.tar.gz --dest /path/to/dest --decompress",`
+
+	AwsS3Url         = "https://s3.amazonaws.com"
 	RegionEnv        = "AWS_REGION"
 	KeyIDEnv         = "AWS_ACCESS_KEY_ID"
 	SecretEnv        = "AWS_SECRET_KEY"

@@ -103,6 +103,9 @@ func (c *Config) NewConfig(cmd *cobra.Command) *Config {
 	c.EndPoint = utils.Env(utils.EndPointEnv)
 	c.ForcePath = utils.Env(utils.ForcePathEnv) == "true"
 	c.DisableSSL = utils.Env(utils.DisableSSLEnv) == "true"
+	if c.EndPoint == "" {
+		c.EndPoint = utils.AwsS3Url
+	}
 	// Remove trailing slash
 	if len(c.Path) > 0 && c.Path[len(c.Path)-1] == '/' {
 		c.Path = c.Path[:len(c.Path)-1]
