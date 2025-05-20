@@ -34,7 +34,7 @@ import (
 
 var RestoreCmd = &cobra.Command{
 	Use:     "restore ",
-	Short:   "Restore data ",
+	Short:   "Restore performs the restore operation",
 	Example: utils.RestoreExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		err := pkg.Restore(cmd)
