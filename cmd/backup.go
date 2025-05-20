@@ -34,7 +34,7 @@ import (
 
 var BackupCmd = &cobra.Command{
 	Use:     "backup ",
-	Short:   "Backup data ",
+	Short:   "Backup performs the backup operation ",
 	Example: utils.BackupExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		err := pkg.Backup(cmd)

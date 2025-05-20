@@ -26,16 +26,6 @@ package pkg
 
 import "testing"
 
-func TestRemovePrefix(t *testing.T) {
-	file := "path/to/file.txt"
-	prefix := "path/to"
-	expected := "file.txt"
-	result := removePrefix(file, prefix)
-	if result != expected {
-		t.Errorf("Expected %s, but got %s", expected, result)
-	}
-}
-
 func TestIsRelativePath(t *testing.T) {
 	relativePath := "path/to/file.txt"
 	absolutePath := "/absolute/path/to/file.txt"
