@@ -1,22 +1,11 @@
-# S3Safe - Secure S3 Backup & Restore Tool
+# S3Safe - S3 Backup & Restore Tool
 
 [![GitHub Release](https://img.shields.io/github/v/release/jkaninda/s3safe)](https://github.com/jkaninda/s3safe/releases)
 [![Go Report Card](https://goreportcard.com/badge/github.com/jkaninda/s3safe)](https://goreportcard.com/report/github.com/jkaninda/s3safe)
 [![Go Reference](https://pkg.go.dev/badge/github.com/jkaninda/s3safe.svg)](https://pkg.go.dev/github.com/jkaninda/s3safe)
 ![Docker Image Size](https://img.shields.io/docker/image-size/jkaninda/s3safe?style=flat-square)
-![Docker Pulls](https://img.shields.io/docker/pulls/jkaninda/s3safe?style=flat-square)
 
-S3Safe is a lightweight CLI tool for securely backing up and restoring data from Amazon S3 and S3-compatible storage.
-
-## Key Features
-- **Secure transfers** to/from S3-compatible storage
-- **Compression support** (gzip/tar)
-- **Flexible operations**:
-    - Backup entire directories or single files
-    - Restore with optional decompression
-    - Recursive operations
-    - Exclusion patterns
-- **Docker support** for containerized environments
+S3Safe is simple a lightweight CLI tool for backing up and restoring data from Amazon S3 and S3-compatible storage.
 
 ## Installation
 ```shell
@@ -52,7 +41,6 @@ AWS_DISABLE_SSL="false"  # Set "true" for non-HTTPS endpoints
 | `--file`          | `-f`  | Process single file instead of directory             |
 | `--ignore-errors` | `-i`  | Continue on errors during restore                    |
 | `--env-file`      |       | Custom environment file (default: .env)              |
-| `--bucket`        | `b`   | S3 bucket name                                       |
 | `--help`          | `-h`  | Show help message                                    |
 | `--version`       | `-v`  | Show version information                             |
 
@@ -120,10 +108,5 @@ docker run --rm --env-file .env \
 ## License
 MIT License - See [LICENSE](LICENSE) for details.
 
-## Contributing
-Contributions welcome! Please open an issue or PR on [GitHub](https://github.com/jkaninda/s3safe)
 
-
----
-### Copyright (c) 2025 Jonas Kaninda
 
