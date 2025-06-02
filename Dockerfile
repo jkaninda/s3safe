@@ -10,7 +10,7 @@ RUN go mod download
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-X 'github.com/jkaninda/s3safe/utils.Version=${appVersion}'" -o /app/s3safe
 
 
-FROM alpine:3.21.3
+FROM alpine:3.22.0
 ENV TZ=UTC
 ARG appVersion=""
 ENV VERSION=${appVersion}
